@@ -9,11 +9,15 @@ function createWindow(): void {
     width: 900,
     height: 670,
     show: false,
+    frame: false, // 设置为 false 隐藏默认窗口标题栏
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      webSecurity: false,
+      nodeIntegration: true,      //教程只有此项，无下方两个参数设置，如需支持node内方法需设置此三项
+      contextIsolation: false,
     }
   })
 
@@ -51,6 +55,24 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.on('window-min', function () {
+    const mainWindow = BrowserWindow.getFocusedWindow()
+    mainWindow?.minimize();
+  })
+  //登录窗口最大化 
+  ipcMain.on('window-max', function () {
+    const mainWindow = BrowserWindow.getFocusedWindow()
+    if (mainWindow?.isMaximized()) {
+      mainWindow.restore();
+    } else {
+      mainWindow?.maximize();
+    }
+  })
+  ipcMain.on('window-close', function () {
+    const mainWindow = BrowserWindow.getFocusedWindow()
+    mainWindow?.close();
+  })
 
   createWindow()
 
