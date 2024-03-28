@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, toValue } from "vue";
+import { onMounted, ref } from "vue";
 import palyList from './components/palyList.vue'
 import { ElMessage } from 'element-plus'
 // import { ipcRenderer } from 'electron';
@@ -145,7 +145,7 @@ onMounted(() => {
   window.electron.ipcRenderer.send('get-config');
   // // 监听配置响应  
   window.electron.ipcRenderer.on('config-reply', (event: any, data) => {
-    console.log(data);
+    console.log(event);
     if (data.list) {
       list.value = data.list as any[]
     }

@@ -71,7 +71,7 @@ app.whenReady().then(() => {
     event.reply('data-saved-reply', 'Data saved successfully!');
   });
   ipcMain.on('cVideo', (event, data) => {
-    console.log('cVideo',data);
+    console.log('cVideo',event);
     // 将从渲染进程接收到的数据保存到 store 中  
     store.set('cVideo', data);
   });
