@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, toValue } from "vue";
 import palyList from './components/palyList.vue'
 import { ElMessage } from 'element-plus'
+// import { ipcRenderer } from 'electron';
 
 const fs = window.require('fs')
 const path = window.require('path')
@@ -31,7 +32,6 @@ const getDirFilePath = (dirPath: any) => {
       let ps: any = []
       files.forEach(file => {
         const filePath = path.join(dirPath, file);
-        console.log(file);
         // 检查文件是否为普通文件
         ps.push(new Promise((r: any) => {
           fs.stat(filePath, async (statErr, stats) => {
@@ -62,11 +62,14 @@ const getDirFilePath = (dirPath: any) => {
         }))
       });
       Promise.all(ps).then(() => {
-        resove(res)
+        resove(res.sort((a, b) => {
+          return a.name > b.name ? 1 : -1
+        }))
       })
     });
   })
 }
+
 const getList = async (files: any) => {
   let res: any = [];
   for (let index = 0; index < files.length; index++) {
@@ -93,7 +96,8 @@ const getList = async (files: any) => {
 const play = (e) => {
   videosrc.value = e.path
   cVideo.value = e;
-  console.log(e, '222222222');
+  let copy = JSON.parse(JSON.stringify(e));
+  window.electron.ipcRenderer.send('cVideo', copy);
 }
 const cVideo = ref()
 const playVideo = (type: string) => {
@@ -138,16 +142,27 @@ const searchVideo = (type, id) => {
 }
 
 onMounted(() => {
+  window.electron.ipcRenderer.send('get-config');
+  // // 监听配置响应  
+  window.electron.ipcRenderer.on('config-reply', (event: any, data) => {
+    console.log(data);
+    if (data.list) {
+      list.value = data.list as any[]
+    }
+    if (data.cVideo) {
+      cVideo.value = data.cVideo
+    }
+  });
+
   // Handle file drop event
   document.body.addEventListener('drop', function (event: any) {
     event.preventDefault();
     event.stopPropagation();
 
     const files = event.dataTransfer.files;
-    console.log(event, files);
     getList(files).then((x) => {
-      console.log(x, '111111111111111111111122222');
-      list.value = x
+      list.value = x;
+      window.electron.ipcRenderer.send('save-data', x);
     })
   });
 
@@ -160,6 +175,16 @@ const drawer = ref(false)
 const min = () => window.electron.ipcRenderer.send('window-min')
 const max = () => window.electron.ipcRenderer.send('window-max')
 const close = () => window.electron.ipcRenderer.send('window-close')
+
+const mask = ref(0.5)
+const isShow = ref(false)
+const control = ref(false)
+const setOp = () => {
+  mask.value += 0.1
+  if (mask.value >= 0.8) {
+    mask.value = 0.1
+  }
+}
 </script>
 
 <template>
@@ -167,7 +192,7 @@ const close = () => window.electron.ipcRenderer.send('window-close')
     <video id="my-video" ref="video" class="video" :src="videosrc" autoplay controls preload="auto"></video>
 
 
-    <el-drawer v-model="drawer" :with-header="false">
+    <el-drawer v-model="drawer" :with-header="false" style="min-width: 280px;">
       <div class="play-list">
         <div class="title">播放列表</div>
         <palyList :items="list" @play="play" :cVideo="cVideo"></palyList>
@@ -175,16 +200,24 @@ const close = () => window.electron.ipcRenderer.send('window-close')
     </el-drawer>
     <div class="bar">
       <el-button-group>
-        <el-button size="small" v-if="cVideo" :icon="'ArrowLeft'" @click="playVideo('pre')"></el-button>
-        <el-button size="small" v-if="cVideo" :icon="'ArrowRight'" @click="playVideo('next')"></el-button>
-        <el-button size="small" @click="drawer = true">播放列表</el-button>
-        <el-button size="small" @click="list = []">清空播放列表</el-button>
-        <el-button size="small" :icon="'Minus'" @click="min"></el-button>
-        <el-button size="small" :icon="'Plus'" @click="max"></el-button>
+
+        <el-button size="small" @click="control = !control">控</el-button>
+        <el-button size="small" @click="drawer = true">表</el-button>
+        <template v-if="control">
+          <el-button size="small" v-if="cVideo" :icon="'ArrowLeft'" @click="playVideo('pre')"></el-button>
+          <el-button size="small" v-if="cVideo" :icon="'ArrowRight'" @click="playVideo('next')"></el-button>
+          <el-button size="small" @click="list = []">清</el-button>
+          <el-button size="small" :icon="'Minus'" @click="min"></el-button>
+          <el-button size="small" :icon="'Plus'" @click="max"></el-button>
+          <el-button size="small" @click="setOp">透</el-button>
+        </template>
+        <el-button size="small" @click="isShow = !isShow">蒙{{ isShow ? '开' : '关' }}</el-button>
         <el-button size="small" :icon="'Close'" @click="close"></el-button>
         <el-button size="small" :icon="'Rank'" class="drag"></el-button>
       </el-button-group>
     </div>
+
+    <div class="over" v-if="isShow" :style="{ background: `rgba(0,0,0,${mask})` }"></div>
   </div>
 </template>
 <style>
@@ -217,10 +250,12 @@ video {
   left: 0;
   opacity: 0;
   transition: opacity 0.5s ease-in-out;
+  z-index: 2000;
 }
 
 .wrap {
   height: 100vh;
+
   &:hover {
     .bar {
       // display: block;
@@ -242,5 +277,17 @@ video {
       -webkit-app-region: drag;
     }
   }
+}
+
+.over {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 0;
+  height: 100%;
+  overflow: auto;
+  // -webkit-app-region: drag;
 }
 </style>

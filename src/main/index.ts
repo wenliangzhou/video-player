@@ -2,6 +2,11 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import Store from 'electron-store'
+
+Store.initRenderer()
+
+const store = new Store();
 
 function createWindow(): void {
   // Create the browser window.
@@ -20,7 +25,6 @@ function createWindow(): void {
       contextIsolation: false,
     }
   })
-
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -53,6 +57,25 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  // 监听来自渲染进程的 'get-config' 消息  
+  ipcMain.on('get-config', (event) => {
+    // 获取配置并发送给渲染进程  
+    const config = store.store; // 获取完整的配置对象  
+    event.reply('config-reply', config);
+  });
+
+  ipcMain.on('save-data', (event, data) => {
+    // 将从渲染进程接收到的数据保存到 store 中  
+    store.set('list', data);
+    // 如果需要，你可以发送一个回复给渲染进程  
+    event.reply('data-saved-reply', 'Data saved successfully!');
+  });
+  ipcMain.on('cVideo', (event, data) => {
+    console.log('cVideo',data);
+    // 将从渲染进程接收到的数据保存到 store 中  
+    store.set('cVideo', data);
+  });
+
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
@@ -73,7 +96,6 @@ app.whenReady().then(() => {
     const mainWindow = BrowserWindow.getFocusedWindow()
     mainWindow?.close();
   })
-
   createWindow()
 
   app.on('activate', function () {
