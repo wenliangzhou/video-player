@@ -197,6 +197,10 @@ const setOp = () => {
   color.value = `rgba(0,0,0,${mask.value})`;
 }
 
+const clear = () =>{
+  list.value = []
+  window.electron.ipcRenderer.send('save-data', []);
+}
 
 </script>
 
@@ -219,7 +223,7 @@ const setOp = () => {
         <template v-if="control">
           <el-button size="small" v-if="cVideo" :icon="'ArrowLeft'" @click="playVideo('pre')"></el-button>
           <el-button size="small" v-if="cVideo" :icon="'ArrowRight'" @click="playVideo('next')"></el-button>
-          <el-button size="small" @click="list = []">清</el-button>
+          <el-button size="small" @click="clear">清</el-button>
           <el-button size="small" :icon="'Minus'" @click="min"></el-button>
           <el-button size="small" :icon="'Plus'" @click="max"></el-button>
         </template>
