@@ -1,5 +1,6 @@
 <template>
-  <el-tree :data="items" node-key="path" style="min-width: 250px;" :highlight-current="true" :accordion="true" :default-checked-keys="[cVideo.path]" :default-expanded-keys="[cVideo.path]">
+  <el-tree :data="items" node-key="path" style="min-width: 250px;" :highlight-current="true" :accordion="true"
+    :default-checked-keys="[cVideo ? cVideo.path : '']" :default-expanded-keys="[cVideo ? cVideo.path : '']">
     <template #default="{ data }">
       <div :class="{ active: cVideo?.path === data.path }" @click="play(data)">{{ data.name }}</div>
     </template>
