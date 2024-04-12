@@ -306,7 +306,7 @@ video {
 
 .vjs-text-track-display {
   background: var(--mask);
-  bottom: 0;
+  bottom: 0 !important;
 }
 
 #my-player {
