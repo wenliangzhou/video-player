@@ -3,6 +3,8 @@ import { onMounted, ref } from "vue";
 import palyList from './components/palyList.vue'
 import { ElMessage } from 'element-plus'
 // import { ipcRenderer } from 'electron';
+import videojs from 'video.js';
+import { useCssVar } from '@vueuse/core'
 
 const fs = window.require('fs')
 const path = window.require('path')
@@ -165,8 +167,15 @@ onMounted(() => {
       window.electron.ipcRenderer.send('save-data', x);
     })
   });
-
-
+  const player = videojs(video.value, { controls: false, autoplay: true, bigPlayButton: true }, () => {
+    player.log('onPlayerReady', this);
+  });
+  document.addEventListener('mouseover', () => {
+    player.controls(true)
+  })
+  document.addEventListener('mouseout', () => {
+    player.controls(false)
+  })
 })
 
 
@@ -176,20 +185,25 @@ const min = () => window.electron.ipcRenderer.send('window-min')
 const max = () => window.electron.ipcRenderer.send('window-max')
 const close = () => window.electron.ipcRenderer.send('window-close')
 
-const mask = ref(0.5)
-const isShow = ref(false)
+const mask = ref(0)
 const control = ref(false)
+const el = ref(null)
+const color = useCssVar('--mask', el, { initialValue: `rgba(0,0,0,${mask.value})` })
 const setOp = () => {
-  mask.value += 0.1
-  if (mask.value >= 0.8) {
-    mask.value = 0.1
+  mask.value = parseFloat((mask.value + 0.1).toFixed(1))
+  if (mask.value >= 0.9) {
+    mask.value = 0
   }
+  color.value = `rgba(0,0,0,${mask.value})`;
 }
+
+
 </script>
 
 <template>
-  <div class="wrap">
-    <video id="my-video" ref="video" class="video" :src="videosrc" autoplay controls preload="auto"></video>
+  <div class="wrap" ref="el">
+    <video id="my-player" ref="video" class="video-js vjs-theme-sea" :src="videosrc" autoplay controls
+      preload="auto"></video>
 
 
     <el-drawer v-model="drawer" :with-header="false" style="min-width: 280px;">
@@ -200,7 +214,6 @@ const setOp = () => {
     </el-drawer>
     <div class="bar">
       <el-button-group>
-
         <el-button size="small" @click="control = !control">控</el-button>
         <el-button size="small" @click="drawer = true">表</el-button>
         <template v-if="control">
@@ -209,18 +222,24 @@ const setOp = () => {
           <el-button size="small" @click="list = []">清</el-button>
           <el-button size="small" :icon="'Minus'" @click="min"></el-button>
           <el-button size="small" :icon="'Plus'" @click="max"></el-button>
-          <el-button size="small" @click="setOp">透</el-button>
         </template>
-        <el-button size="small" @click="isShow = !isShow">蒙{{ isShow ? '开' : '关' }}</el-button>
+        <el-button size="small" @click="setOp">{{ mask === 0 ? '蒙' : `Mask` }}</el-button>
         <el-button size="small" :icon="'Close'" @click="close"></el-button>
         <el-button size="small" :icon="'Rank'" class="drag"></el-button>
       </el-button-group>
     </div>
-
-    <div class="over" v-if="isShow" :style="{ background: `rgba(0,0,0,${mask})` }"></div>
   </div>
+  <div class="over"></div>
 </template>
 <style>
+@import url('video.js/dist/video-js.css');
+
+/* @import url('@videojs/themes/dist/sea/index.css'); */
+.my-player-dimensions {
+  width: 100%;
+  height: 100%
+}
+
 .el-drawer {
   --el-drawer-padding-primary: 10px;
 }
@@ -243,18 +262,24 @@ video {
   height: 100vh;
 }
 
+.video-js {
+  width: 100%;
+  height: 100vh;
+}
+
 .bar {
   // display: none;
   position: absolute;
   top: 0;
   left: 0;
   opacity: 0;
-  transition: opacity 0.5s ease-in-out;
+  transition: opacity 0.1s ease-in-out;
   z-index: 2000;
 }
 
 .wrap {
   height: 100vh;
+  --color: black;
 
   &:hover {
     .bar {
@@ -279,15 +304,34 @@ video {
   }
 }
 
+.vjs-text-track-display {
+  background: var(--mask);
+  bottom: 0;
+}
+
+#my-player {
+  background-color: rgb(31, 31, 31);
+}
+
+/* 假设你的控制条类名是 .vjs-control-bar */
+.vjs-control-bar {
+  transition: none !important;
+  /* 移除过渡效果 */
+}
+
+/* 可能还需要移除鼠标悬停时的延迟显示效果 */
+.vjs-fade-out {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
 .over {
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 0;
-  left: 0;
   z-index: 0;
-  height: 100%;
-  overflow: auto;
-  // -webkit-app-region: drag;
+  width: 100px;
+  height: 50px;
+  -webkit-app-region: drag;
+  cursor: pointer;
 }
 </style>
