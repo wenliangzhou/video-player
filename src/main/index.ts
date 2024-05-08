@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, globalShortcut } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -25,6 +25,14 @@ function createWindow(): void {
       contextIsolation: false,
     }
   })
+
+  globalShortcut.register('CmdOrCtrl+Shift+M', () => {
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore(); // 如果窗口已经最大化，则恢复它  
+    } else {
+      mainWindow?.minimize();
+    }
+  });
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -71,7 +79,7 @@ app.whenReady().then(() => {
     event.reply('data-saved-reply', 'Data saved successfully!');
   });
   ipcMain.on('cVideo', (event, data) => {
-    console.log('cVideo',event);
+    console.log('cVideo', event);
     // 将从渲染进程接收到的数据保存到 store 中  
     store.set('cVideo', data);
   });

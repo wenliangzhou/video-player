@@ -176,6 +176,47 @@ onMounted(() => {
   document.addEventListener('mouseout', () => {
     player.controls(false)
   })
+
+  let isMax = true;
+  // 监听键盘按下事件
+  document.addEventListener('keydown', function (e) {
+    // 快进/快退的时长，单位为秒
+    var fastSeekTime = 10; // 10秒
+    // 快进快退的快捷键设置为左箭头和右箭头键
+    let time = !!player.currentTime() ? player.currentTime() : 0
+    console.log(e.code, 'time');
+    switch (e.code) {
+      case 'ArrowLeft': // 左箭头键 (快退)
+        player.currentTime(time as number - fastSeekTime);
+        break;
+      case 'ArrowRight': // 右箭头键 (快进)
+        player.currentTime(time as number + fastSeekTime);
+        break;
+      case 'Space': // 右箭头键 (快进)
+        if (player.paused()) {
+          player.play();
+        } else {
+          player.pause();
+        }
+        break;
+      case 'Enter': // 右箭头键 (快进)
+        if (isMax) {
+          window.electron.ipcRenderer.send('window-min');
+        }
+        break;
+      case 'NumpadEnter': // 右箭头键 (快进)
+        if (isMax) {
+          window.electron.ipcRenderer.send('window-min');
+        }
+        break;
+      default:
+        return;
+    }
+
+    // 阻止默认行为，防止箭头键影响光标位置
+    e.preventDefault();
+  });
+
 })
 
 
@@ -197,7 +238,7 @@ const setOp = () => {
   color.value = `rgba(0,0,0,${mask.value})`;
 }
 
-const clear = () =>{
+const clear = () => {
   list.value = []
   window.electron.ipcRenderer.send('save-data', []);
 }
@@ -328,6 +369,7 @@ video {
   visibility: hidden !important;
   opacity: 0 !important;
 }
+
 .over {
   position: fixed;
   top: 0;
@@ -337,5 +379,17 @@ video {
   height: 50px;
   -webkit-app-region: drag;
   cursor: pointer;
+}
+
+.video-js.vjs-focus-bord {
+  outline: none;
+}
+
+.video-js:focus {
+  outline: none;
+}
+
+.vjs-tech {
+  outline: none;
 }
 </style>
